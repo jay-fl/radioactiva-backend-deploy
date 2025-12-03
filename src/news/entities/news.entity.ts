@@ -33,7 +33,7 @@ export class News {
   @ManyToOne(() => Program, (program) => program.news)
   program: Program;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onUpdate: 'CASCADE' })
   @JoinColumn({ name: 'userEmail', referencedColumnName: 'email' })
   user: User;
 

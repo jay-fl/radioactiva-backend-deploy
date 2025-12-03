@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Program } from './entities/program.entity';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
+import { News } from '../news/entities/news.entity';
 
 @Injectable()
 export class ProgramsService {
@@ -81,8 +86,55 @@ export class ProgramsService {
   }
 
   async remove(id: number) {
-    const program = await this.findOne(id);
-    await this.programRepository.remove(program);
-    return { message: 'Programa Eliminado' };
+    return this.programRepository.manager.transaction(async (manager) => {
+      // Buscar el programa con sus relaciones
+      const program = await manager.findOne(Program, {
+        where: { id },
+        relations: ['user', 'news'],
+      });
+
+      if (!program) {
+        throw new NotFoundException('Programa no encontrado');
+      }
+
+      // Buscar usuario admin para reasignar noticias
+      const adminUser = await manager.findOne(User, {
+        where: { role: 'admin' },
+        relations: ['programs'],
+      });
+
+      if (!adminUser) {
+        throw new NotFoundException('No se encontró un usuario administrador');
+      }
+
+      // Obtener un programa del admin para reasignar las noticias
+      const adminProgram = adminUser.programs?.[0];
+      if (!adminProgram) {
+        throw new BadRequestException(
+          'El administrador no tiene programas creados',
+        );
+      }
+
+      // 1. Reasignar noticias del programa a eliminar
+      if (program.news && program.news.length > 0) {
+        await manager.update(
+          News,
+          { program: { id: program.id } }, // Buscar noticias por email
+          {
+            userEmail: adminUser.email, // Actualizar email
+            user: adminUser, // Actualizar relación usuario
+            program: adminProgram, // Reasignar a programa del admin
+          },
+        );
+      }
+
+      // 2. Eliminar el programa
+      await manager.remove(Program, program);
+
+      return {
+        message:
+          'Programa eliminado. Las noticias fueron reasignadas al administrador.',
+      };
+    });
   }
 }

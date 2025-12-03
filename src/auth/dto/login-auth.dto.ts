@@ -5,14 +5,13 @@ export class LoginAuthDto {
   @IsEmail({}, { message: 'Email no válido' })
   email: string;
 
-  @Transform(({ value }) => value.trim())
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsNotEmpty({ message: 'La contraseña es requerida.' })
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres.' })
   @Matches(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]).*$/,
     {
-      message:
-        'La contraseña debe contener al menos una minúscula, una mayúscula, un número y un carácter especial.',
+      message: 'La contraseña es incorrecta',
     },
   )
   password: string;

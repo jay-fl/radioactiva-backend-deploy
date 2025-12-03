@@ -8,6 +8,7 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import * as bcryptjs from 'bcryptjs';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from 'src/common/enums/rol.enum';
 
 @Injectable()
 export class AuthService {
@@ -16,20 +17,23 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register({ name, email, password }: RegisterAuthDto) {
+  async register({ name, email, password, role }: RegisterAuthDto) {
     const user = await this.usersService.findOneByEmail(email);
     if (user) {
       throw new BadRequestException('El email ya está registrado');
     }
+
     await this.usersService.create({
       name,
       email,
       password: await bcryptjs.hash(password, 10),
+      role: role || Role.USER, // Si no se especifica rol, usa USER por defecto
     });
 
     return {
       name,
       email,
+      role: role || Role.USER,
     };
   }
 

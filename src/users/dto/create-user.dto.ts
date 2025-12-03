@@ -1,14 +1,17 @@
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MinLength,
 } from 'class-validator';
+import { Role } from 'src/common/enums/rol.enum';
 
 export class CreateUserDto {
-  @Transform(({ value }) => value.trim())
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'El nombre debe ser un texto.' })
   @MinLength(1, { message: 'El nombre es requerido.' })
   name: string;
@@ -17,7 +20,7 @@ export class CreateUserDto {
   @IsEmail({}, { message: 'Email no válido' })
   email: string;
 
-  @Transform(({ value }) => value.trim())
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsNotEmpty({ message: 'La contraseña es requerida.' })
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres.' })
   @Matches(
@@ -28,4 +31,9 @@ export class CreateUserDto {
     },
   )
   password: string;
+
+  // Nuevo campo para el rol
+  @IsOptional()
+  @IsEnum(Role, { message: 'El rol debe ser válido.' })
+  role?: Role;
 }
